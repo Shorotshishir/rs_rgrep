@@ -1,9 +1,10 @@
 use std::error::Error;
-use std::fs;
+use std::{fs};
 
 pub struct Config {
     pub query: String,
     pub file_path: String,
+    pub ignore_case: bool,
 }
 
 impl Config {
@@ -13,19 +14,26 @@ impl Config {
         }
         let query= args[1].clone();
         let file_path = args[2].clone();
-        return Ok(Config { query, file_path });
+        let ignore_case = true;
+
+        return Ok(Config { query, file_path, ignore_case });
     }
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>>{
     let content = fs::read_to_string(config.file_path)?;
-    for line in search(&config.query, &content){
-        println!("{}", line);
+    let results = if config.ignore_case {
+        search_case_insensitive(&config.query, &content)
+    } else {
+        search_case_sensitive(&config.query, &content)
+    };
+    for line in results {
+        println!("{}",line);
     }
     return Ok(());
 }
 
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let mut results = Vec::new();
     for line in contents.lines() {
         if line.contains(query) {
@@ -48,7 +56,6 @@ pub fn search_case_insensitive<'a>(query:&str, contents:&'a str) -> Vec<&'a str>
 
 #[cfg(test)]
 mod tests {
-    use std::panic::resume_unwind;
     use super::*;
     #[test]
     fn one_result() {
@@ -59,7 +66,7 @@ safe, fast, productive.
 Pick three.";
         assert_eq!(
             vec!["safe, fast, productive."],
-            search(query, content)
+            search_case_sensitive(query, content)
         );
     }
 
